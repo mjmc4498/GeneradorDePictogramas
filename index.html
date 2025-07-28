@@ -210,7 +210,7 @@
             // --- 3. UI COMPONENTS ---
             const UI = {
                 elements: {
-                    searchForm: document.getElementById('search-btn').parentElement,
+                    searchBtn: document.getElementById('search-btn'),
                     searchInput: document.getElementById('icon-search'),
                     galleryWrapper: document.getElementById('icon-gallery-wrapper'),
                     gallery: document.getElementById('icon-gallery'),
@@ -321,12 +321,20 @@
                     AppState.subscribe(UI.renderHistory);
 
                     // Setup event listeners
-                    UI.elements.searchForm.addEventListener('submit', (e) => {
-                        e.preventDefault();
+                    const handleSearch = () => {
                         const searchTerm = UI.elements.searchInput.value;
                         AppState.setState({ currentSearch: searchTerm });
                         ApiModule.searchAll(searchTerm);
+                    };
+
+                    UI.elements.searchBtn.addEventListener('click', handleSearch);
+                    UI.elements.searchInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSearch();
+                        }
                     });
+
                     UI.elements.textInput.addEventListener('input', (e) => {
                         AppState.setState({ text: e.target.value });
                     });
