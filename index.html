@@ -149,7 +149,10 @@
 
         <footer class="mt-5">
             <section id="history-section">
-                <h2 class="h4 text-center mb-3">Historial Reciente</h2>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h4 mb-0">Historial Reciente</h2>
+                    <button id="clear-history-btn" class="btn btn-sm btn-outline-danger">Borrar Historial</button>
+                </div>
                 <div id="history-container" class="d-flex flex-wrap gap-3 justify-content-center">
                     <!-- El historial se cargará aquí -->
                 </div>
@@ -195,6 +198,10 @@
                 addToHistory(pictogram) {
                     const newHistory = [pictogram, ...this.state.history.filter(p => p.id !== pictogram.id)].slice(0, 10);
                     this.setState({ history: newHistory });
+                },
+
+                clearHistory() {
+                    this.setState({ history: [] });
                 }
             };
 
@@ -250,6 +257,7 @@
                     preview: document.getElementById('pictogram-container'),
                     downloadButtons: document.getElementById('download-options'),
                     historyContainer: document.getElementById('history-container'),
+                    clearHistoryBtn: document.getElementById('clear-history-btn'),
                 },
                 renderGallery: (state) => {
                     UI.elements.gallery.innerHTML = '';
@@ -368,6 +376,12 @@
 
                     UI.elements.textInput.addEventListener('input', (e) => {
                         AppState.setState({ text: e.target.value });
+                    });
+
+                    UI.elements.clearHistoryBtn.addEventListener('click', () => {
+                        if (confirm('¿Estás seguro de que quieres borrar el historial?')) {
+                            AppState.clearHistory();
+                        }
                     });
 
                     DownloadModule.init();
