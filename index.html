@@ -90,7 +90,10 @@
                         <div id="pictogram-container" class="d-flex flex-column justify-content-center align-items-center text-center bg-white rounded p-3" style="border: 2px dashed #dee2e6; min-height: 250px;">
                             <p class="text-muted">Selecciona un pictograma y escribe un texto para ver el resultado.</p>
                         </div>
-                        <button id="generate-btn" class="btn btn-success btn-lg w-100 mt-3" disabled>Generar y Descargar</button>
+                        <div id="download-options" class="d-grid gap-2 d-none">
+                            <button id="download-png-btn" class="btn btn-primary btn-lg">Descargar PNG</button>
+                            <button id="download-pdf-btn" class="btn btn-secondary btn-lg">Descargar PDF</button>
+                        </div>
                     </aside>
                 </div>
             </div>
@@ -98,8 +101,12 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const { jsPDF } = window.jspdf;
+
             // State
             let state = {
                 selectedIconUrl: null,
@@ -116,7 +123,9 @@
                 loader: document.getElementById('loader'),
                 textInput: document.getElementById('pictogram-text'),
                 pictogramContainer: document.getElementById('pictogram-container'),
-                generateBtn: document.getElementById('generate-btn'),
+                downloadOptions: document.getElementById('download-options'),
+                downloadPngBtn: document.getElementById('download-png-btn'),
+                downloadPdfBtn: document.getElementById('download-pdf-btn'),
             };
 
             // API
@@ -147,7 +156,7 @@
                 // Render preview
                 if (state.selectedIconUrl || state.text) {
                     elements.pictogramContainer.innerHTML = `
-                        ${state.selectedIconUrl ? `<img src="${state.selectedIconUrl}" alt="Pictograma" class="img-fluid" style="max-height: 150px;">` : ''}
+                        ${state.selectedIconUrl ? `<img src="${state.selectedIconUrl}" alt="Pictograma" class="img-fluid" style="max-height: 150px;" crossorigin="anonymous">` : ''}
                         ${state.text ? `<p class="mt-2 h5">${state.text}</p>` : ''}
                     `;
                 } else {
@@ -155,7 +164,11 @@
                 }
 
                 // Update button state
-                elements.generateBtn.disabled = !state.selectedIconUrl || !state.text;
+                if (state.selectedIconUrl && state.text) {
+                    elements.downloadOptions.classList.remove('d-none');
+                } else {
+                    elements.downloadOptions.classList.add('d-none');
+                }
             };
 
             const createPictogramElement = (pictogram) => {
@@ -171,6 +184,27 @@
                     render();
                 });
                 return img;
+            };
+
+            // Download functions
+            const downloadAsPng = () => {
+                html2canvas(elements.pictogramContainer, { useCORS: true }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'pictograma.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            };
+
+            const downloadAsPdf = () => {
+                html2canvas(elements.pictogramContainer, { useCORS: true }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jsPDF();
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    pdf.save('pictograma.pdf');
+                });
             };
 
             // Event Listeners
@@ -197,10 +231,8 @@
                     render();
                 });
 
-                elements.generateBtn.addEventListener('click', () => {
-                    // La funcionalidad de descarga se podría implementar aquí
-                    alert('¡Pictograma generado! La funcionalidad de descarga es un siguiente paso.');
-                });
+                elements.downloadPngBtn.addEventListener('click', downloadAsPng);
+                elements.downloadPdfBtn.addEventListener('click', downloadAsPdf);
             };
 
             // Init
