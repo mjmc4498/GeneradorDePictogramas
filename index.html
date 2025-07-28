@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Pictogramas</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #ecf0f1;
+            --text-color: #2c3e50;
+            --white-color: #ffffff;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        main {
+            background: var(--white-color);
+            padding: 20px 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        header h1 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+
+        .icons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .icon {
+            font-size: 3rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .icon:hover, .icon.selected {
+            transform: scale(1.2);
+        }
+
+        #pictogram-text {
+            width: calc(100% - 20px);
+            padding: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: var(--border-radius);
+            margin-top: 10px;
+            font-size: 1rem;
+        }
+
+        #generate-btn {
+            background-color: var(--secondary-color);
+            color: var(--white-color);
+            border: none;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+
+        #generate-btn:hover {
+            background-color: #27ae60;
+        }
+
+        #pictogram-container {
+            margin-top: 30px;
+            padding: 20px;
+            border: 2px dashed var(--primary-color);
+            border-radius: var(--border-radius);
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pictogram {
+            font-size: 4rem;
+        }
+
+        .pictogram-text-display {
+            margin-top: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Generador de Pictogramas</h1>
+    </header>
+
+    <main>
+        <section id="icon-selector">
+            <h2>Elige un ícono</h2>
+            <div class="icons">
+                <span class="icon">😊</span>
+                <span class="icon">🚫</span>
+                <span class="icon">🏃‍♂️</span>
+                <span class="icon">📚</span>
+            </div>
+        </section>
+
+        <section id="text-input">
+            <h2>Escribe una frase</h2>
+            <input type="text" id="pictogram-text" placeholder="Frase corta...">
+        </section>
+
+        <button id="generate-btn">Generar Pictograma</button>
+
+        <section id="pictogram-output">
+            <h2>Pictograma Generado</h2>
+            <div id="pictogram-container">
+                <!-- Aquí se mostrará el pictograma -->
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const icons = document.querySelectorAll('.icon');
+            const textInput = document.getElementById('pictogram-text');
+            const generateBtn = document.getElementById('generate-btn');
+            const pictogramContainer = document.getElementById('pictogram-container');
+
+            let selectedIcon = null;
+
+            icons.forEach(icon => {
+                icon.addEventListener('click', () => {
+                    icons.forEach(i => i.classList.remove('selected'));
+                    icon.classList.add('selected');
+                    selectedIcon = icon.textContent;
+                });
+            });
+
+            generateBtn.addEventListener('click', () => {
+                const text = textInput.value.trim();
+
+                if (!selectedIcon) {
+                    alert('Por favor, elige un ícono.');
+                    return;
+                }
+
+                if (text === '') {
+                    alert('Por favor, escribe una frase.');
+                    return;
+                }
+
+                pictogramContainer.innerHTML = `
+                    <div class="pictogram">${selectedIcon}</div>
+                    <div class="pictogram-text-display">${text}</div>
+                `;
+            });
+        });
+    </script>
+</body>
+</html>
