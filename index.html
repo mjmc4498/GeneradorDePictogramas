@@ -55,6 +55,9 @@
         #pictogram-container {
             transition: all 0.3s ease-in-out;
         }
+        #history-container .pictogram-wrapper {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -112,6 +115,15 @@
                 </div>
             </div>
         </main>
+
+        <footer class="mt-5">
+            <section id="history-section">
+                <h2 class="h4 text-center mb-3">Historial Reciente</h2>
+                <div id="history-container" class="d-flex flex-wrap gap-3 justify-content-center">
+                    <!-- El historial se cargará aquí -->
+                </div>
+            </section>
+        </footer>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -121,191 +133,213 @@
         document.addEventListener('DOMContentLoaded', () => {
             const { jsPDF } = window.jspdf;
 
-            // State
-            let state = {
-                selectedIconUrl: null,
-                text: '',
-                pictograms: [],
-                isLoading: false,
+            // --- 1. STATE MANAGEMENT ---
+            const AppState = {
+                state: {
+                    currentSearch: '',
+                    pictograms: [],
+                    isLoading: false,
+                    selectedIconUrl: null,
+                    text: '',
+                    history: JSON.parse(localStorage.getItem('pictogramHistory')) || [],
+                },
+                listeners: [],
+
+                getState() {
+                    return this.state;
+                },
+
+                setState(newState) {
+                    this.state = { ...this.state, ...newState };
+                    if (newState.history) {
+                        localStorage.setItem('pictogramHistory', JSON.stringify(this.state.history));
+                    }
+                    this.listeners.forEach(listener => listener(this.state));
+                },
+
+                subscribe(listener) {
+                    this.listeners.push(listener);
+                },
+
+                addToHistory(pictogram) {
+                    const newHistory = [pictogram, ...this.state.history.filter(p => p.id !== pictogram.id)].slice(0, 10);
+                    this.setState({ history: newHistory });
+                }
             };
 
-            // Elements
-            const elements = {
-                iconSearch: document.getElementById('icon-search'),
-                searchBtn: document.getElementById('search-btn'),
-                iconGallery: document.getElementById('icon-gallery'),
-                loader: document.getElementById('loader'),
-                textInput: document.getElementById('pictogram-text'),
-                pictogramContainer: document.getElementById('pictogram-container'),
-                downloadOptions: document.getElementById('download-options'),
-                downloadPngBtn: document.getElementById('download-png-btn'),
-                downloadPdfBtn: document.getElementById('download-pdf-btn'),
-            };
-
-            // API
-            const Apis = {
-                arasaac: {
-                    search: async (searchText) => {
-                        const response = await fetch(`https://api.arasaac.org/api/pictograms/es/search/${searchText}`);
-                        if (!response.ok) throw new Error('Error en ARASAAC');
-                        const data = await response.json();
-                        return data.map(p => ({
-                            id: p._id,
-                            url: `https://api.arasaac.org/api/pictograms/${p._id}?skin=white`,
-                            tags: p.keywords.join(' '),
-                            source: 'ARASAAC'
+            // --- 2. API MODULE ---
+            const ApiModule = {
+                openMojiData: [],
+                arasaacSearch: async (text) => {
+                    const response = await fetch(`https://api.arasaac.org/api/pictograms/es/search/${text}`);
+                    if (!response.ok) return [];
+                    const data = await response.json();
+                    return data.map(p => ({
+                        id: p._id, url: `https://api.arasaac.org/api/pictograms/${p._id}?skin=white`,
+                        tags: p.keywords.join(' '), source: 'ARASAAC'
+                    }));
+                },
+                openMojiSearch: (text) => {
+                    return ApiModule.openMojiData
+                        .filter(e => e.annotation.includes(text) || e.tags.includes(text))
+                        .map(e => ({
+                            id: e.hexcode, url: `https://openmoji.org/data/color/svg/${e.hexcode}.svg`,
+                            tags: `${e.annotation} ${e.tags}`, source: 'OpenMoji'
                         }));
+                },
+                loadOpenMoji: async () => {
+                    if (ApiModule.openMojiData.length > 0) return;
+                    const response = await fetch('https://raw.githubusercontent.com/hfg-gmuend/openmoji/master/data/openmoji.json');
+                    if (!response.ok) throw new Error('Could not load OpenMoji data');
+                    ApiModule.openMojiData = await response.json();
+                },
+                searchAll: async (text) => {
+                    if (!text) return;
+                    AppState.setState({ isLoading: true });
+                    try {
+                        const arasaac = await ApiModule.arasaacSearch(text);
+                        const openmoji = ApiModule.openMojiSearch(text);
+                        AppState.setState({ pictograms: [...arasaac, ...openmoji], isLoading: false });
+                    } catch (e) {
+                        console.error(e);
+                        AppState.setState({ isLoading: false, pictograms: [] });
+                    }
+                }
+            };
+
+            // --- 3. UI COMPONENTS ---
+            const UI = {
+                elements: {
+                    searchForm: document.getElementById('search-btn').parentElement,
+                    searchInput: document.getElementById('icon-search'),
+                    galleryWrapper: document.getElementById('icon-gallery-wrapper'),
+                    gallery: document.getElementById('icon-gallery'),
+                    loader: document.getElementById('loader'),
+                    textInput: document.getElementById('pictogram-text'),
+                    preview: document.getElementById('pictogram-container'),
+                    downloadButtons: document.getElementById('download-options'),
+                    historyContainer: document.getElementById('history-container'),
+                },
+                renderGallery: (state) => {
+                    UI.elements.gallery.innerHTML = '';
+                    UI.elements.loader.classList.toggle('d-none', !state.isLoading);
+                    if (!state.isLoading && state.pictograms.length === 0 && state.currentSearch) {
+                        UI.elements.gallery.innerHTML = '<p class="text-muted">No se encontraron resultados.</p>';
+                    } else {
+                        state.pictograms.forEach(p => UI.elements.gallery.appendChild(UI.createPictoElement(p)));
                     }
                 },
-                openmoji: {
-                    data: [],
-                    load: async () => {
-                        if (Apis.openmoji.data.length > 0) return;
-                        const response = await fetch('https://raw.githubusercontent.com/hfg-gmuend/openmoji/master/data/openmoji.json');
-                        if (!response.ok) throw new Error('Error al cargar OpenMoji');
-                        Apis.openmoji.data = await response.json();
-                    },
-                    search: (searchText) => {
-                        return Apis.openmoji.data
-                            .filter(emoji => emoji.annotation.includes(searchText) || emoji.tags.includes(searchText))
-                            .map(emoji => ({
-                                id: emoji.hexcode,
-                                url: `https://openmoji.org/data/color/svg/${emoji.hexcode}.svg`,
-                                tags: `${emoji.annotation} ${emoji.tags}`,
-                                source: 'OpenMoji'
-                            }));
-                    }
-                }
-            };
-
-            // Render functions
-            const render = () => {
-                // Render gallery
-                elements.iconGallery.innerHTML = '';
-                if (state.isLoading) {
-                    elements.loader.classList.remove('d-none');
-                } else {
-                    elements.loader.classList.add('d-none');
-                    if (state.pictograms.length === 0) {
-                        elements.iconGallery.innerHTML = '<p class="text-muted">No se encontraron pictogramas.</p>';
+                renderPreview: (state) => {
+                    const { selectedIconUrl, text } = state;
+                    if (!selectedIconUrl && !text) {
+                        UI.elements.preview.innerHTML = '<p class="text-muted">Selecciona un pictograma y escribe un texto.</p>';
                     } else {
-                        state.pictograms.forEach(p => elements.iconGallery.appendChild(createPictogramElement(p)));
+                        UI.elements.preview.innerHTML = `
+                            ${selectedIconUrl ? `<img src="${selectedIconUrl}" alt="Pictograma" class="img-fluid" style="max-height: 150px;" crossorigin="anonymous">` : ''}
+                            <p class="mt-2 h5">${text || ''}</p>
+                        `;
+                    }
+                    UI.elements.downloadButtons.classList.toggle('d-none', !(selectedIconUrl && text));
+                },
+                createPictoElement: (pictogram) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'pictogram-wrapper';
+                    wrapper.innerHTML = `
+                        <img src="${pictogram.url}" alt="${pictogram.tags}" class="pictogram-img" data-tags="${pictogram.tags}">
+                        <span class="pictogram-source">${pictogram.source}</span>`;
+                    wrapper.addEventListener('click', () => AppState.setState({ selectedIconUrl: pictogram.url }));
+                    return wrapper;
+                },
+                updateSelected: (state) => {
+                    document.querySelectorAll('.pictogram-img').forEach(img => {
+                        img.classList.toggle('selected', img.src === state.selectedIconUrl);
+                    });
+                },
+                renderHistory: (state) => {
+                    UI.elements.historyContainer.innerHTML = '';
+                    state.history.forEach(p => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'pictogram-wrapper';
+                        wrapper.innerHTML = `
+                            <img src="${p.url}" alt="${p.text}" class="pictogram-img">
+                            <p class="text-center small mt-1">${p.text}</p>
+                        `;
+                        wrapper.addEventListener('click', () => {
+                            AppState.setState({ selectedIconUrl: p.url, text: p.text });
+                        });
+                        UI.elements.historyContainer.appendChild(wrapper);
+                    });
+                }
+            };
+
+            // --- 4. DOWNLOAD MODULE ---
+            const DownloadModule = {
+                init: () => {
+                    document.getElementById('download-png-btn').addEventListener('click', DownloadModule.asPng);
+                    document.getElementById('download-pdf-btn').addEventListener('click', DownloadModule.asPdf);
+                },
+                asPng: () => {
+                    DownloadModule.saveToHistory();
+                    html2canvas(UI.elements.preview, { useCORS: true, backgroundColor: null })
+                        .then(c => {
+                            const link = document.createElement('a');
+                            link.download = 'pictograma.png';
+                            link.href = c.toDataURL('image/png');
+                            link.click();
+                        });
+                },
+                asPdf: () => {
+                    DownloadModule.saveToHistory();
+                    html2canvas(UI.elements.preview, { useCORS: true, backgroundColor: null })
+                        .then(c => {
+                            const imgData = c.toDataURL('image/png');
+                            const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: [c.width, c.height] });
+                            pdf.addImage(imgData, 'PNG', 0, 0, c.width, c.height);
+                            pdf.save('pictograma.pdf');
+                        });
+                },
+                saveToHistory: () => {
+                    const { selectedIconUrl, text } = AppState.getState();
+                    if (selectedIconUrl && text) {
+                        const pictogram = {
+                            id: `${selectedIconUrl}-${text}`,
+                            url: selectedIconUrl,
+                            text: text,
+                        };
+                        AppState.addToHistory(pictogram);
                     }
                 }
-
-                // Render preview
-                if (state.selectedIconUrl || state.text) {
-                    elements.pictogramContainer.innerHTML = `
-                        ${state.selectedIconUrl ? `<img src="${state.selectedIconUrl}" alt="Pictograma" class="img-fluid" style="max-height: 150px;" crossorigin="anonymous">` : ''}
-                        ${state.text ? `<p class="mt-2 h5">${state.text}</p>` : ''}
-                    `;
-                } else {
-                    elements.pictogramContainer.innerHTML = '<p class="text-muted">Selecciona un pictograma y escribe un texto.</p>';
-                }
-
-                // Update button state
-                if (state.selectedIconUrl && state.text) {
-                    elements.downloadOptions.classList.remove('d-none');
-                } else {
-                    elements.downloadOptions.classList.add('d-none');
-                }
             };
 
-            const createPictogramElement = (pictogram) => {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'pictogram-wrapper';
+            // --- 5. APP INITIALIZATION ---
+            const App = {
+                init: () => {
+                    // Subscribe UI components to state changes
+                    AppState.subscribe(UI.renderGallery);
+                    AppState.subscribe(UI.renderPreview);
+                    AppState.subscribe(UI.updateSelected);
+                    AppState.subscribe(UI.renderHistory);
 
-                const img = document.createElement('img');
-                img.src = pictogram.url;
-                img.alt = pictogram.tags;
-                img.className = 'pictogram-img';
-                img.dataset.tags = pictogram.tags;
+                    // Setup event listeners
+                    UI.elements.searchForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        const searchTerm = UI.elements.searchInput.value;
+                        AppState.setState({ currentSearch: searchTerm });
+                        ApiModule.searchAll(searchTerm);
+                    });
+                    UI.elements.textInput.addEventListener('input', (e) => {
+                        AppState.setState({ text: e.target.value });
+                    });
 
-                const source = document.createElement('span');
-                source.className = 'pictogram-source';
-                source.textContent = pictogram.source;
+                    DownloadModule.init();
 
-                wrapper.appendChild(img);
-                wrapper.appendChild(source);
-
-                wrapper.addEventListener('click', () => {
-                    state.selectedIconUrl = img.src;
-                    document.querySelectorAll('.pictogram-img').forEach(i => i.classList.remove('selected'));
-                    img.classList.add('selected');
-                    render();
-                });
-                return wrapper;
-            };
-
-            // Download functions
-            const downloadAsPng = () => {
-                html2canvas(elements.pictogramContainer, { useCORS: true }).then(canvas => {
-                    const link = document.createElement('a');
-                    link.download = 'pictograma.png';
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                });
-            };
-
-            const downloadAsPdf = () => {
-                html2canvas(elements.pictogramContainer, { useCORS: true }).then(canvas => {
-                    const imgData = canvas.toDataURL('image/png');
-                    const pdf = new jsPDF();
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                    pdf.save('pictograma.pdf');
-                });
-            };
-
-            // Event Listeners
-            const setupEventListeners = () => {
-                const performSearch = async () => {
-                    const searchText = elements.iconSearch.value.toLowerCase().trim();
-                    if (!searchText) return;
-
-                    state.isLoading = true;
-                    render();
-
-                    try {
-                        const arasaacResults = await Apis.arasaac.search(searchText);
-                        const openmojiResults = Apis.openmoji.search(searchText);
-
-                        state.pictograms = [...arasaacResults, ...openmojiResults];
-                    } catch (error) {
-                        console.error(error);
-                        elements.iconGallery.innerHTML = `<p class="text-danger">Error al buscar pictogramas.</p>`;
-                    } finally {
-                        state.isLoading = false;
-                        render();
-                    }
-                };
-
-                elements.searchBtn.addEventListener('click', performSearch);
-                elements.iconSearch.addEventListener('keypress', (e) => e.key === 'Enter' && performSearch());
-
-                elements.textInput.addEventListener('input', (e) => {
-                    state.text = e.target.value;
-                    render();
-                });
-
-                elements.downloadPngBtn.addEventListener('click', downloadAsPng);
-                elements.downloadPdfBtn.addEventListener('click', downloadAsPdf);
-            };
-
-            // Init
-            const init = async () => {
-                setupEventListeners();
-                render();
-                try {
-                    await Apis.openmoji.load();
-                } catch (error) {
-                    console.error(error);
-                    // Opcional: mostrar un mensaje al usuario
+                    // Initial Load
+                    ApiModule.loadOpenMoji().catch(console.error);
+                    AppState.setState({}); // Initial render
                 }
             };
 
-            init();
+            App.init();
         });
     </script>
 </body>
