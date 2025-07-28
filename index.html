@@ -50,8 +50,18 @@
             margin-top: 30px;
         }
 
+        #icon-search {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            font-size: 1rem;
+        }
+
         .icons {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
             gap: 20px;
             margin: 20px 0;
@@ -124,11 +134,23 @@
     <main>
         <section id="icon-selector">
             <h2>Elige un ícono</h2>
+            <input type="text" id="icon-search" placeholder="Buscar ícono...">
             <div class="icons">
-                <span class="icon">😊</span>
-                <span class="icon">🚫</span>
-                <span class="icon">🏃‍♂️</span>
-                <span class="icon">📚</span>
+                <span class="icon" data-tags="feliz cara sonrisa">😊</span>
+                <span class="icon" data-tags="triste cara lloro">😢</span>
+                <span class="icon" data-tags="enfadado cara rojo">😠</span>
+                <span class="icon" data-tags="sorprendido cara asombro">😮</span>
+                <span class="icon" data-tags="amor corazon">❤️</span>
+                <span class="icon" data-tags="prohibido no parar">🚫</span>
+                <span class="icon" data-tags="correr deporte hombre">🏃‍♂️</span>
+                <span class="icon" data-tags="leer libro estudio">📚</span>
+                <span class="icon" data-tags="comer comida manzana">🍎</span>
+                <span class="icon" data-tags="dormir zzz cama">😴</span>
+                <span class="icon" data-tags="uno numero">1️⃣</span>
+                <span class="icon" data-tags="dos numero">2️⃣</span>
+                <span class="icon" data-tags="tres numero">3️⃣</span>
+                <span class="icon" data-tags="pregunta duda">❓</span>
+                <span class="icon" data-tags="idea bombilla luz">💡</span>
             </div>
         </section>
 
@@ -153,6 +175,7 @@
             const textInput = document.getElementById('pictogram-text');
             const generateBtn = document.getElementById('generate-btn');
             const pictogramContainer = document.getElementById('pictogram-container');
+            const iconSearch = document.getElementById('icon-search');
 
             let selectedIcon = null;
 
@@ -181,6 +204,19 @@
                     <div class="pictogram">${selectedIcon}</div>
                     <div class="pictogram-text-display">${text}</div>
                 `;
+            });
+
+            iconSearch.addEventListener('input', () => {
+                const searchTerm = iconSearch.value.toLowerCase().trim();
+
+                icons.forEach(icon => {
+                    const tags = icon.dataset.tags.toLowerCase();
+                    if (tags.includes(searchTerm)) {
+                        icon.style.display = 'inline-block';
+                    } else {
+                        icon.style.display = 'none';
+                    }
+                });
             });
         });
     </script>
