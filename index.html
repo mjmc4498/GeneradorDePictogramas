@@ -3,195 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Pictogramas</title>
+    <title>Generador de Pictogramas con Bootstrap</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #3498db;
-            --secondary-color: #2ecc71;
-            --background-color: #ecf0f1;
-            --text-color: #2c3e50;
-            --white-color: #ffffff;
-            --border-radius: 8px;
-            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        .icon-gallery {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            padding: 1rem;
         }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        main {
-            background: var(--white-color);
-            padding: 20px 30px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            width: 100%;
-            max-width: 500px;
-            text-align: center;
-        }
-
-        header h1 {
-            color: var(--primary-color);
-            margin-bottom: 20px;
-        }
-
-        h2 {
-            color: var(--primary-color);
-            border-bottom: 2px solid var(--secondary-color);
-            padding-bottom: 5px;
-            margin-top: 30px;
-        }
-
-        #icon-search {
-            width: calc(100% - 22px);
-            padding: 10px;
-            border: 2px solid #bdc3c7;
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
-            font-size: 1rem;
-        }
-
-        .icons {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-            margin: 20px 0;
-        }
-
-        .icon {
-            font-size: 3rem;
+        .pictogram-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
             cursor: pointer;
-            transition: transform 0.2s;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            transition: border-color 0.2s;
         }
-
-        .icon:hover, .icon.selected {
-            transform: scale(1.2);
+        .pictogram-img.selected {
+            border-color: #0d6efd;
         }
-
-        #pictogram-text {
-            width: calc(100% - 20px);
-            padding: 10px;
-            border: 2px solid #bdc3c7;
-            border-radius: var(--border-radius);
-            margin-top: 10px;
-            font-size: 1rem;
-        }
-
-        #generate-btn {
-            background-color: var(--secondary-color);
-            color: var(--white-color);
-            border: none;
-            padding: 12px 25px;
-            font-size: 1.1rem;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            margin-top: 20px;
-            transition: background-color 0.3s;
-        }
-
-        #generate-btn:hover {
-            background-color: #27ae60;
-        }
-
         #pictogram-container {
-            margin-top: 30px;
-            padding: 20px;
-            border: 2px dashed var(--primary-color);
-            border-radius: var(--border-radius);
-            min-height: 150px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .pictogram {
-            font-size: 4rem;
-        }
-
-        .pictogram-text-display {
-            margin-top: 10px;
-            font-size: 1.2rem;
-            font-weight: bold;
+            border: 2px dashed #0d6efd;
+            padding: 1.5rem;
+            min-height: 200px;
         }
     </style>
 </head>
-<body>
+<body class="bg-light">
 
-    <header>
-        <h1>Generador de Pictogramas</h1>
-    </header>
+    <div class="container mt-5">
+        <header class="text-center mb-4">
+            <h1 class="display-4">Generador de Pictogramas</h1>
+        </header>
 
-    <main>
-        <section id="icon-selector">
-            <h2>Elige un ícono</h2>
-            <input type="text" id="icon-search" placeholder="Buscar ícono...">
-            <div class="icons">
-                <span class="icon" data-tags="feliz cara sonrisa">😊</span>
-                <span class="icon" data-tags="triste cara lloro">😢</span>
-                <span class="icon" data-tags="enfadado cara rojo">😠</span>
-                <span class="icon" data-tags="sorprendido cara asombro">😮</span>
-                <span class="icon" data-tags="amor corazon">❤️</span>
-                <span class="icon" data-tags="prohibido no parar">🚫</span>
-                <span class="icon" data-tags="correr deporte hombre">🏃‍♂️</span>
-                <span class="icon" data-tags="leer libro estudio">📚</span>
-                <span class="icon" data-tags="comer comida manzana">🍎</span>
-                <span class="icon" data-tags="dormir zzz cama">😴</span>
-                <span class="icon" data-tags="uno numero">1️⃣</span>
-                <span class="icon" data-tags="dos numero">2️⃣</span>
-                <span class="icon" data-tags="tres numero">3️⃣</span>
-                <span class="icon" data-tags="pregunta duda">❓</span>
-                <span class="icon" data-tags="idea bombilla luz">💡</span>
+        <main class="card p-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <section id="icon-selector">
+                        <h2 class="h4">Elige un Pictograma</h2>
+                        <input type="text" id="icon-search" class="form-control mb-3" placeholder="Buscar pictograma...">
+                        <div id="icon-gallery" class="icon-gallery d-flex flex-wrap gap-2">
+                            <!-- Las imágenes de los pictogramas se cargarán aquí -->
+                        </div>
+                    </section>
+                </div>
+                <div class="col-md-6">
+                    <section id="text-input" class="mb-3">
+                        <h2 class="h4">Escribe una Frase</h2>
+                        <input type="text" id="pictogram-text" class="form-control" placeholder="Frase corta...">
+                    </section>
+
+                    <button id="generate-btn" class="btn btn-primary w-100 mb-3">Generar Pictograma</button>
+
+                    <section id="pictogram-output">
+                        <h2 class="h4">Pictograma Generado</h2>
+                        <div id="pictogram-container" class="d-flex flex-column justify-content-center align-items-center text-center">
+                            <!-- Aquí se mostrará el pictograma -->
+                        </div>
+                    </section>
+                </div>
             </div>
-        </section>
+        </main>
+    </div>
 
-        <section id="text-input">
-            <h2>Escribe una frase</h2>
-            <input type="text" id="pictogram-text" placeholder="Frase corta...">
-        </section>
-
-        <button id="generate-btn">Generar Pictograma</button>
-
-        <section id="pictogram-output">
-            <h2>Pictograma Generado</h2>
-            <div id="pictogram-container">
-                <!-- Aquí se mostrará el pictograma -->
-            </div>
-        </section>
-    </main>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const icons = document.querySelectorAll('.icon');
+        document.addEventListener('DOMContentLoaded', async () => {
+            const iconGallery = document.getElementById('icon-gallery');
+            const iconSearch = document.getElementById('icon-search');
             const textInput = document.getElementById('pictogram-text');
             const generateBtn = document.getElementById('generate-btn');
             const pictogramContainer = document.getElementById('pictogram-container');
-            const iconSearch = document.getElementById('icon-search');
 
-            let selectedIcon = null;
+            let selectedIconUrl = null;
 
-            icons.forEach(icon => {
-                icon.addEventListener('click', () => {
-                    icons.forEach(i => i.classList.remove('selected'));
-                    icon.classList.add('selected');
-                    selectedIcon = icon.textContent;
-                });
+            // Función para cargar pictogramas de ARASAAC
+            const loadArasaacPictograms = async (searchText = 'sonrisa') => {
+                try {
+                    const response = await fetch(`https://api.arasaac.org/api/pictograms/es/search/${searchText}`);
+                    const pictograms = await response.json();
+
+                    iconGallery.innerHTML = '';
+                    pictograms.slice(0, 50).forEach(pictogram => { // Limitar a 50 para el ejemplo
+                        const img = document.createElement('img');
+                        img.src = `https://api.arasaac.org/api/pictograms/${pictogram._id}`;
+                        img.alt = pictogram.keywords.join(', ');
+                        img.className = 'pictogram-img';
+                        img.dataset.tags = pictogram.keywords.join(' ');
+
+                        img.addEventListener('click', () => {
+                            document.querySelectorAll('.pictogram-img').forEach(i => i.classList.remove('selected'));
+                            img.classList.add('selected');
+                            selectedIconUrl = img.src;
+                        });
+
+                        iconGallery.appendChild(img);
+                    });
+                } catch (error) {
+                    console.error('Error al cargar los pictogramas de ARASAAC:', error);
+                    iconGallery.innerHTML = '<p class="text-danger">No se pudieron cargar los pictogramas.</p>';
+                }
+            };
+
+            // Cargar pictogramas iniciales
+            loadArasaacPictograms();
+
+            // Lógica de búsqueda
+            iconSearch.addEventListener('input', () => {
+                loadArasaacPictograms(iconSearch.value);
             });
 
+            // Lógica de generación
             generateBtn.addEventListener('click', () => {
                 const text = textInput.value.trim();
 
-                if (!selectedIcon) {
-                    alert('Por favor, elige un ícono.');
+                if (!selectedIconUrl) {
+                    alert('Por favor, elige un pictograma.');
                     return;
                 }
 
@@ -201,22 +130,9 @@
                 }
 
                 pictogramContainer.innerHTML = `
-                    <div class="pictogram">${selectedIcon}</div>
-                    <div class="pictogram-text-display">${text}</div>
+                    <img src="${selectedIconUrl}" alt="Pictograma seleccionado" style="width: 120px; height: 120px; object-fit: contain;">
+                    <p class="mt-2 h5">${text}</p>
                 `;
-            });
-
-            iconSearch.addEventListener('input', () => {
-                const searchTerm = iconSearch.value.toLowerCase().trim();
-
-                icons.forEach(icon => {
-                    const tags = icon.dataset.tags.toLowerCase();
-                    if (tags.includes(searchTerm)) {
-                        icon.style.display = 'inline-block';
-                    } else {
-                        icon.style.display = 'none';
-                    }
-                });
             });
         });
     </script>
