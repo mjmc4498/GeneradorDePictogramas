@@ -21,6 +21,9 @@
             padding: 1rem;
             background-color: #fff;
         }
+        .pictogram-wrapper {
+            position: relative;
+        }
         .pictogram-img {
             width: 90px;
             height: 90px;
@@ -29,6 +32,17 @@
             border: 3px solid transparent;
             border-radius: 0.5rem;
             transition: all 0.2s ease-in-out;
+            background-color: #fff;
+        }
+        .pictogram-source {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            border-radius: 3px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
         }
         .pictogram-img:hover {
             transform: scale(1.05);
@@ -129,12 +143,38 @@
             };
 
             // API
-            const arasaacApi = {
-                search: async (searchText) => {
-                    if (!searchText) return [];
-                    const response = await fetch(`https://api.arasaac.org/api/pictograms/es/search/${searchText}`);
-                    if (!response.ok) throw new Error('Error en la búsqueda de pictogramas');
-                    return await response.json();
+            const Apis = {
+                arasaac: {
+                    search: async (searchText) => {
+                        const response = await fetch(`https://api.arasaac.org/api/pictograms/es/search/${searchText}`);
+                        if (!response.ok) throw new Error('Error en ARASAAC');
+                        const data = await response.json();
+                        return data.map(p => ({
+                            id: p._id,
+                            url: `https://api.arasaac.org/api/pictograms/${p._id}?skin=white`,
+                            tags: p.keywords.join(' '),
+                            source: 'ARASAAC'
+                        }));
+                    }
+                },
+                openmoji: {
+                    data: [],
+                    load: async () => {
+                        if (Apis.openmoji.data.length > 0) return;
+                        const response = await fetch('https://raw.githubusercontent.com/hfg-gmuend/openmoji/master/data/openmoji.json');
+                        if (!response.ok) throw new Error('Error al cargar OpenMoji');
+                        Apis.openmoji.data = await response.json();
+                    },
+                    search: (searchText) => {
+                        return Apis.openmoji.data
+                            .filter(emoji => emoji.annotation.includes(searchText) || emoji.tags.includes(searchText))
+                            .map(emoji => ({
+                                id: emoji.hexcode,
+                                url: `https://openmoji.org/data/color/svg/${emoji.hexcode}.svg`,
+                                tags: `${emoji.annotation} ${emoji.tags}`,
+                                source: 'OpenMoji'
+                            }));
+                    }
                 }
             };
 
@@ -172,18 +212,29 @@
             };
 
             const createPictogramElement = (pictogram) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'pictogram-wrapper';
+
                 const img = document.createElement('img');
-                img.src = `https://api.arasaac.org/api/pictograms/${pictogram._id}?skin=white`;
-                img.alt = pictogram.keywords[0];
+                img.src = pictogram.url;
+                img.alt = pictogram.tags;
                 img.className = 'pictogram-img';
-                img.dataset.tags = pictogram.keywords.join(' ');
-                img.addEventListener('click', () => {
+                img.dataset.tags = pictogram.tags;
+
+                const source = document.createElement('span');
+                source.className = 'pictogram-source';
+                source.textContent = pictogram.source;
+
+                wrapper.appendChild(img);
+                wrapper.appendChild(source);
+
+                wrapper.addEventListener('click', () => {
                     state.selectedIconUrl = img.src;
                     document.querySelectorAll('.pictogram-img').forEach(i => i.classList.remove('selected'));
                     img.classList.add('selected');
                     render();
                 });
-                return img;
+                return wrapper;
             };
 
             // Download functions
@@ -210,13 +261,20 @@
             // Event Listeners
             const setupEventListeners = () => {
                 const performSearch = async () => {
+                    const searchText = elements.iconSearch.value.toLowerCase().trim();
+                    if (!searchText) return;
+
                     state.isLoading = true;
                     render();
+
                     try {
-                        state.pictograms = await arasaacApi.search(elements.iconSearch.value);
+                        const arasaacResults = await Apis.arasaac.search(searchText);
+                        const openmojiResults = Apis.openmoji.search(searchText);
+
+                        state.pictograms = [...arasaacResults, ...openmojiResults];
                     } catch (error) {
                         console.error(error);
-                        elements.iconGallery.innerHTML = `<p class="text-danger">${error.message}</p>`;
+                        elements.iconGallery.innerHTML = `<p class="text-danger">Error al buscar pictogramas.</p>`;
                     } finally {
                         state.isLoading = false;
                         render();
@@ -236,9 +294,15 @@
             };
 
             // Init
-            const init = () => {
+            const init = async () => {
                 setupEventListeners();
                 render();
+                try {
+                    await Apis.openmoji.load();
+                } catch (error) {
+                    console.error(error);
+                    // Opcional: mostrar un mensaje al usuario
+                }
             };
 
             init();
